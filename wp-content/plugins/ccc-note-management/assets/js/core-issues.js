@@ -180,7 +180,12 @@ window.onload = function() {
             }
 
             // Combine new and existing core issues with updated severities
-            const coreIssues = Object.values(activeCoreIssues);
+            const coreIssues = Object.values(activeCoreIssues).map(issue => ({
+                id: issue.id,
+                name: issue.name,
+                severity: issue.severity,
+                is_existing: issue.id.toString().indexOf('new_') === -1 // Flag to identify existing issues
+            }));
             
             console.log("📡 Core Issues being sent:", coreIssues);
 
@@ -260,17 +265,13 @@ window.onload = function() {
             
             console.log(`Severity changed for issue ${issueId} to ${newSeverity}`);
             
-            // Update the active core issues tracking
             if (issueId) {
-                if (!activeCoreIssues[issueId]) {
-                    activeCoreIssues[issueId] = {
-                        id: issueId,
-                        name: row.querySelector('input[type="text"]').value,
-                        severity: newSeverity
-                    };
-                } else {
-                    activeCoreIssues[issueId].severity = newSeverity;
-                }
+                activeCoreIssues[issueId] = {
+                    id: issueId,
+                    name: row.querySelector('input[type="text"]').value,
+                    severity: newSeverity,
+                    is_existing: true // Mark as existing issue
+                };
             }
         }
     });

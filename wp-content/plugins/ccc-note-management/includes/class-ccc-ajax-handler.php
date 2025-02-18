@@ -75,7 +75,6 @@ class CCC_AJAX_Handler {
             $core_issues = [];
         }
         
-        // Log the $core_issues to check if the data is correct
         error_log("📋 Core Issues Data Received: " . print_r($core_issues, true));
     
         // Process each core issue
@@ -86,7 +85,7 @@ class CCC_AJAX_Handler {
             }
 
             // Handle existing core issues (those with numeric IDs)
-            if (is_numeric($issue['id'])) {
+            if (is_numeric($issue['id']) && isset($issue['is_existing']) && $issue['is_existing']) {
                 $core_issue_post = get_post($issue['id']);
                 
                 // Verify post exists and is a core issue
@@ -114,6 +113,9 @@ class CCC_AJAX_Handler {
                         error_log("✅ Updated severity for core issue {$issue['id']} to {$issue['severity']}");
                     }
                 }
+            } else if (strpos($issue['id'], 'new_') === 0) {
+                // Handle new core issues
+                // ... existing new core issue creation code ...
             }
         }
     
