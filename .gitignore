@@ -1,0 +1,5 @@
+error_log
+wp-admin/error_log
+wp-content/uploads/
+wp-content/cache/
+wp-content/updraft/
