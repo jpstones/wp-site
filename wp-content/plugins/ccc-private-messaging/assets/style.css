@@ -1,0 +1,245 @@
+/* General container for two-column layout */
+.pm-container {
+    display: flex;
+    gap: 20px;
+}
+
+/* Left column (Contacts list) - properly aligned */
+.pm-contacts {
+    width: 25%;
+    padding: 0; /* Remove padding for top alignment */
+    margin-bottom: 20px; /* Add more space between pills */
+
+}
+
+
+/* Contacts list items (pill-shaped) */
+#pm-contacts-list,
+.pm-contact-list {
+    list-style-type: none; /* Remove bullets */
+    padding: 0;
+    margin: 0;
+}
+
+.pm-contact {
+    margin-bottom: 20px; /* Correctly adds space between pills */
+}
+
+.pm-pill {
+    display: flex;
+    align-items: center;
+    background-color: #ffffff; /* White background for pills */
+    color: #BC1752; /* Red text */
+    padding: 12px 18px; /* Slightly more padding inside pills */
+    border-radius: 25px; /* Pill shape */
+    width: 100%;
+    max-width: 250px;
+    cursor: pointer;
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.15); /* Shadow shifted down and right */
+    justify-content: flex-start; /* Left-align content */
+}
+
+.pm-avatar, .pm-recipient-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 10px;
+}
+
+/* Selected contact styling */
+.pm-selected-contact .pm-pill {
+    background-color: #f3f3f3;
+    border: 2px solid #BC1752;
+}
+
+/* Right column (Chat thread) */
+.pm-chat-area {
+    width: 75%;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.15); /* Updated shadow direction */
+}
+
+/* Chat input section */
+.pm-chat-input {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+
+}
+
+textarea {
+    width: 85%;
+    padding: 10px;
+    resize: none;
+}
+
+/* General message bubble styling */
+
+#pm-message-content {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    resize: none;
+    min-height: 50px; /* Consistent minimum height for the textarea */
+}
+
+#pm-send-message {
+    background-color: #BC1752;
+    color: white;
+    border: none;
+    padding: 0 20px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    min-height: 100%; /* Matches the height of the textarea */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px; /* Keeps the button width reasonable */
+}
+
+#pm-send-message:hover {
+    background-color: #a31346;
+}
+
+.pm-message-bubble {
+    padding: 12px;
+    border-radius: 10px;
+    max-width: 60%;
+    margin-bottom: 10px;
+    word-wrap: break-word;
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: flex-start;
+}
+
+/* Recipient avatar next to their speech bubble */
+.pm-recipient-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+
+/* Space between image and bubble */
+.pm-message-recipient img.pm-avatar {
+    margin-right: 8px;
+}
+
+/* Recipient messages (left-aligned) */
+.pm-message-recipient {
+    background-color: #F8D4D8;
+    color: #6E2429;
+    text-align: left;
+    display: flex;
+}
+
+/* Sender messages (right-aligned) */
+.pm-message-sender {
+    background-color: #D4E7F8;
+    color: #254E6E;
+    text-align: right;
+    margin-left: auto;
+}
+
+/* Date separator styling */
+.pm-date-separator {
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+    margin: 20px 0 10px 0;
+}
+
+/* mic and attach button styling */
+.pm-chat-input {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.action-button {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%; /* Perfect circle */
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 5px 0; /* Space between icons */
+    border: 1px solid #ccc; /* Normal border */
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.action-button:hover {
+    background-color: #e0e0e0; /* Light grey on hover */
+    border: none; /* No extra borders on hover */
+}
+
+.action-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain; /* Prevent stretching of the icon */
+}
+
+
+/* File attachment bubble for sender */
+.pm-message-sender .file-attachment {
+    background-color: #D4E7F8; /* Same as sender bubbles */
+    padding: 10px;
+    border-radius: 10px;
+    max-width: 60%;
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    word-wrap: break-word;
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.1);
+    text-align: right;
+    margin-left: auto;
+    color: #254E6E;
+}
+
+/* File attachment bubble for recipient */
+.pm-message-recipient .file-attachment {
+    background-color: #F8D4D8; /* Same as recipient bubbles */
+    padding: 10px;
+    border-radius: 10px;
+    max-width: 60%;
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    word-wrap: break-word;
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.1);
+    text-align: left;
+    color: #6E2429;
+}
+
+/* Attachment icon in the bubble */
+.file-attachment img {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    object-fit: contain;
+}
+
+/* Links to attachments */
+.file-attachment a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+/* in thread in line image preview */
+
+.pm-image-preview {
+    max-width: 150px;
+    max-height: 150px;
+    border-radius: 8px;
+    margin-top: 5px;
+    display: block;
+}

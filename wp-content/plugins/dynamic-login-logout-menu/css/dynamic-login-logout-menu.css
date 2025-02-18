@@ -1,0 +1,23 @@
+/* Style for the dynamic login/logout menu */
+.dynamic-login-menu {
+    display: flex !important; /* Align links horizontally */
+    gap: 10px !important; /* Add spacing between elements */
+    align-items: center !important; /* Vertically center content */
+    font-size: 14px !important; /* Adjust font size */
+    color: white !important; /* Force white text */
+}
+
+.dynamic-login-menu .menu-greeting {
+    color: white !important; /* Ensure greeting text is white */
+}
+
+.dynamic-login-menu a {
+    text-decoration: none !important; /* Always underline links */
+    color: white !important; /* Force link text to be white */
+    font-weight: normal !important; /* Normalize font weight */
+}
+
+.dynamic-login-menu a:hover {
+    color: white !important; /* Keep links white on hover */
+    text-decoration: underline !important; /* Maintain underline on hover */
+}

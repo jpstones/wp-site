@@ -1,0 +1,51 @@
+.booking-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+#calendar {
+    margin-bottom: 20px;
+}
+
+.time-slot {
+    padding: 10px;
+    background-color: #f1f1f1;
+    margin: 5px 0;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.3s;
+}
+
+.time-slot:hover {
+    background-color: #ff4b77; /* Soft magenta for hover effect */
+    color: white;
+}
+
+.time-slot.selected {
+    background-color: #ff4b77; /* Highlight selected slot */
+    color: white;
+}
+
+#book-now {
+    padding: 10px 20px;
+    background-color: #ff4b77;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    display: block;
+}
+
+#book-now:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}

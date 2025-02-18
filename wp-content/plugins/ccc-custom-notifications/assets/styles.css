@@ -1,0 +1,43 @@
+#ccc-notifications-widget {
+    padding: 0;
+    max-width: 100%; /* Full width */
+    background: none; /* Remove background color */
+    border: none; /* Remove border */
+}
+
+/* Remove the heading above the notifications */
+#ccc-notifications-widget h3 {
+    display: none;
+}
+
+#ccc-notifications-widget ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Full-width table styling */
+#ccc-notifications-widget table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* Table cells */
+#ccc-notifications-widget th,
+#ccc-notifications-widget td {
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+/* Header row background */
+#ccc-notifications-widget th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+/* Remove spacing around each notification */
+#ccc-notifications-widget li {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
