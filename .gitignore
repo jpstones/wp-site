@@ -3,3 +3,5 @@ wp-admin/error_log
 wp-content/uploads/
 wp-content/cache/
 wp-content/updraft/
+wp-content/plugins/nitropack/auth.json
+bfg.jar
