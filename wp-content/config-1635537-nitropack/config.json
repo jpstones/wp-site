@@ -1,0 +1,39 @@
+{
+    "chronicconditionsclinic.com": {
+        "siteId": "cjXaVDcLDuqbWojmHMKWMVdWXDVOjhyT",
+        "siteSecret": "3tlK74rsFEH9NKenmIxgftc4BSaGwFvbZ71yJCdFrlvYtH4pSurHUnXqZRToalZR",
+        "blogId": 1,
+        "compression": false,
+        "webhookToken": "04b88731dbc6243b91be57b8462fb24e",
+        "home_url": "https:\/\/chronicconditionsclinic.com",
+        "admin_url": "https:\/\/chronicconditionsclinic.com\/wp-admin\/",
+        "hosting": "unknown",
+        "alwaysBuffer": true,
+        "isEzoicActive": false,
+        "isApoActive": false,
+        "isNginxHelperActive": false,
+        "isLateIntegrationInitRequired": false,
+        "isDlmActive": false,
+        "isWoocommerceCacheHandlerActive": false,
+        "isWoocommerceActive": false,
+        "isAeliaCurrencySwitcherActive": false,
+        "isGeoTargetingWPActive": false,
+        "dlm_downloading_url": null,
+        "dlm_download_endpoint": null,
+        "pluginVersion": "1.17.6",
+        "options_cache": {
+            "cache_handler_cache_handler": false,
+            "woocommerce_default_customer_address": false,
+            "ajaxShortcodes": {
+                "enabled": false,
+                "shortcodes": []
+            },
+            "wc_aelia_currency_switcher": {
+                "ipgeolocation_enabled": null
+            }
+        },
+        "additional_domains": [],
+        "minimumLogLevel": null
+    },
+    "config_path": "fd821353fb92c18a98411f2c860f3fd3"
+}

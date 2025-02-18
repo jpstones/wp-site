@@ -9,6 +9,27 @@ window.onload = function() {
     const addCoreIssueButton = document.getElementById("add-core-issue");
     const coreIssuesContainer = document.getElementById("core-issues-container");
 
+    // Check if elements exist before proceeding
+    if (!submitButton) {
+        console.error("❌ Save Note button not found!");
+        return;
+    }
+
+    if (!noteInput) {
+        console.error("❌ Note input not found!");
+        return;
+    }
+
+    if (!addCoreIssueButton) {
+        console.error("❌ Add Core Issue button not found!");
+        return;
+    }
+
+    if (!coreIssuesContainer) {
+        console.error("❌ Core Issues container not found!");
+        return;
+    }
+
     // Modal Elements
     const modal = document.getElementById("core-issue-modal");
     const modalCloseButton = document.getElementById("modal-close");
@@ -18,6 +39,13 @@ window.onload = function() {
     const modalFirstAppearance = document.getElementById("core-issue-first-appearance");
     const modalCuriosity = document.getElementById("core-issue-curiosity");
     const modalCompassion = document.getElementById("core-issue-compassion");
+
+    // Check modal elements
+    if (!modal || !modalCloseButton || !modalSaveButton || !modalName || 
+        !modalSeverity || !modalFirstAppearance || !modalCuriosity || !modalCompassion) {
+        console.error("❌ One or more modal elements not found!");
+        return;
+    }
 
     let coreIssuesData = [];
     let activeCoreIssues = {};
@@ -132,9 +160,22 @@ window.onload = function() {
             event.preventDefault();
             console.log("🔥 Save Note button clicked!");
 
-            const clientId = new URLSearchParams(window.location.search).get("client_id");
+            // Try to get client ID from URL first
+            let clientId = new URLSearchParams(window.location.search).get("client_id");
+            
+            // If not in URL, try to get from dropdown
             if (!clientId) {
-                alert("Invalid client ID.");
+                const clientDropdown = document.getElementById("ccc_assigned_client");
+                if (clientDropdown) {
+                    clientId = clientDropdown.value;
+                }
+            }
+
+            // Log the client ID for debugging
+            console.log("📌 Client ID:", clientId);
+
+            if (!clientId) {
+                alert("Invalid client ID. Please select a client from the dropdown.");
                 return;
             }
 
