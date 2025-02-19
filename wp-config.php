@@ -30,16 +30,16 @@ define( 'WP_CACHE', false /* Modified by NitroPack */ );
 
 // ** Database settings - You can get this info from your web host ** //
 /** The name of the database for WordPress */
-define('DB_NAME', 'jpstones_WPR3S');
+define('DB_NAME', 'local');
 
 /** Database username */
-define('DB_USER', 'jpstones_WPR3S');
+define('DB_USER', 'root');
 
 /** Database password */
-define('DB_PASSWORD', '2bzemIVRet:{o{bRI');
+define('DB_PASSWORD', 'root');
 
 /** Database hostname */
-define('DB_HOST', 'localhost');
+define('DB_HOST', 'localhost:/Users/jpstones/Library/Application Support/Local/run/nkulsOfi-/mysql/mysqld.sock');
 
 /** Database charset to use in creating database tables. */
 define( 'DB_CHARSET', 'utf8' );
@@ -102,6 +102,7 @@ define('WP_DEBUG', true);
 define('WP_DEBUG_LOG', true);
 define('WP_DEBUG_DISPLAY', false);
 @ini_set( 'display_errors', 0 );
+define( 'WP_ENVIRONMENT_TYPE', 'local' );
 /* That's all, stop editing! Happy publishing. */
 
 /** Absolute path to the WordPress directory. */
@@ -111,3 +112,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Sets up WordPress vars and included files. */
 require_once ABSPATH . 'wp-settings.php';
+
+define('WP_HOME', 'http://ccc.local');
+define('WP_SITEURL', 'http://ccc.local');
