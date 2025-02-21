@@ -1,0 +1,18 @@
+/* Primary Clinician Display */
+.primary-clinician {
+    margin-bottom: 10px;
+}
+
+.clinician-name {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.clinician-links a {
+    color: #BC1752;
+    text-decoration: none;
+}
+
+.clinician-links a:hover {
+    text-decoration: underline;
+} 
