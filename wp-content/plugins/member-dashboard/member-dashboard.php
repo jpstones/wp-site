@@ -50,6 +50,18 @@ add_shortcode('member_dashboard_greeting', 'custom_member_dashboard_greeting');
 
 // END GREETING
 
+// START ENQUEUE STYLES
+function member_dashboard_enqueue_styles() {
+    wp_enqueue_style(
+        'member-dashboard-styles', 
+        plugin_dir_url(__FILE__) . 'assets/style.css',
+        [],
+        '1.0.0'
+    );
+}
+add_action('wp_enqueue_scripts', 'member_dashboard_enqueue_styles');
+// END ENQUEUE STYLES
+
 // START GET COACHES
 
 // Function to get the primary clinician for the logged-in user
@@ -75,8 +87,6 @@ function get_primary_clinician($member_id) {
 // Shortcode to display the primary clinician assigned to the current member
 function display_primary_clinician() {
     $member_id = get_current_user_id();
-
-    // Debugging: Log the current user ID
     error_log('Current User ID: ' . $member_id);
 
     $primary_clinician = get_primary_clinician($member_id);
@@ -86,11 +96,20 @@ function display_primary_clinician() {
 
         // Generate the links
         $clinician_name = esc_html($primary_clinician->display_name);
-        $clinician_url = esc_url('https://chronicconditionsclinic.com/team/' . sanitize_title($primary_clinician->display_name));
-
-        // Output Full Name, View Profile (link), and Message (plain text)
-        return $clinician_name . '<br>
-                <a href="' . $clinician_url . '" target="_blank" rel="noopener">View Profile</a> | <a href="https://chronicconditionsclinic.com/private-messaging/">Message</a>';
+        $clinician_url = esc_url('/team/' . sanitize_title($primary_clinician->display_name));
+        
+        // Return formatted HTML without inline styles
+        return sprintf(
+            '<div class="primary-clinician">
+                <strong class="clinician-name">%s</strong>
+                <div class="clinician-links">
+                    <a href="%s" target="_blank" rel="noopener">Profile</a> | 
+                    <a href="/private-messaging/">Message</a>
+                </div>
+            </div>',
+            $clinician_name,
+            $clinician_url
+        );
     } else {
         error_log('No coach assigned for Member ID: ' . $member_id);
         return 'No coach assigned yet.';

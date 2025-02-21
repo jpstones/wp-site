@@ -24,9 +24,19 @@ require_once CCC_NOTE_MANAGEMENT_PATH . 'includes/install.php';
 
 // Initialize plugin
 function ccc_note_management_init() {
-    // Register hooks here if needed later
+    // Add debugging
+    add_action('wp_footer', function() {
+        if (is_user_logged_in()) {
+            echo '<!-- CCC Note Management Plugin: User is logged in -->';
+            echo '<!-- User ID: ' . get_current_user_id() . ' -->';
+        } else {
+            echo '<!-- CCC Note Management Plugin: User is NOT logged in -->';
+        }
+    });
 }
-add_action('plugins_loaded', 'ccc_note_management_init');
+
+// Make sure the plugin loads early enough
+add_action('init', 'ccc_note_management_init', 1);
 
 // END INCLUDE FILES DB ENTRIES
 
@@ -34,7 +44,7 @@ add_action('plugins_loaded', 'ccc_note_management_init');
 // START ENQUEUE ASSETS
 
 function ccc_enqueue_assets() {
-    // Styles
+    // Styles - load everywhere
     wp_enqueue_style(
         'ccc-styles',
         CCC_NOTE_MANAGEMENT_URL . 'assets/css/styles.css',
@@ -42,26 +52,63 @@ function ccc_enqueue_assets() {
         CCC_NOTE_MANAGEMENT_VERSION
     );
 
-    // Scripts
-    wp_enqueue_script(
-        'ccc-core-issues',
-        CCC_NOTE_MANAGEMENT_URL . 'assets/js/core-issues.js',
-        ['jquery'],
-        time(), // Force latest version
-        true
-    );
+    // Scripts - only load on add-note page
+    if (isset($_GET['page']) && $_GET['page'] === 'add-new-note') {
+        wp_enqueue_script(
+            'ccc-add-note',
+            CCC_NOTE_MANAGEMENT_URL . 'assets/js/add-note.js',
+            ['jquery'],
+            time(),
+            true
+        );
 
-    // ✅ Pass AJAX data to JavaScript using `ccc_ajax` (Fix for Undefined Error)
-    wp_localize_script('ccc-core-issues', 'ccc_ajax', [
-        'ajax_url'     => admin_url('admin-ajax.php'),
-        'security'     => wp_create_nonce('ccc_save_note_nonce'), // Nonce for security
-    ]);
+        // Add type="module" to the script
+        add_filter('script_loader_tag', function($tag, $handle, $src) {
+            if ('ccc-add-note' === $handle) {
+                return '<script type="module" src="' . esc_url($src) . '"></script>';
+            }
+            return $tag;
+        }, 10, 3);
 
-    // ✅ Pass icons separately (Fix path issue)
-    wp_localize_script('ccc-core-issues', 'cccData', [
-        'trashIcon'    => CCC_NOTE_MANAGEMENT_URL . 'assets/images/trash-icon.svg',
-        'archiveIcon'  => CCC_NOTE_MANAGEMENT_URL . 'assets/images/archive-icon.svg',
-    ]);
+        wp_localize_script('ccc-add-note', 'ccc_ajax', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'security' => wp_create_nonce('ccc_save_note_nonce'),
+        ]);
+
+        wp_localize_script('ccc-add-note', 'cccData', [
+            'trashIcon' => CCC_NOTE_MANAGEMENT_URL . 'assets/images/trash-icon.svg',
+            'archiveIcon' => CCC_NOTE_MANAGEMENT_URL . 'assets/images/archive-icon.svg',
+        ]);
+    }
+
+    // Member Profile page scripts
+    if (is_page('c-dash/member-profile')) {
+        // Enqueue Chart.js first
+        wp_enqueue_script(
+            'chartjs',
+            'https://cdn.jsdelivr.net/npm/chart.js',
+            [],
+            null,
+            true
+        );
+
+        // Then enqueue our client core issues script
+        wp_enqueue_script(
+            'ccc-client-core-issues',
+            CCC_NOTE_MANAGEMENT_URL . 'assets/js/client-core-issues.js',
+            ['chartjs'],
+            time(),
+            true
+        );
+
+        // Add type="module" to the script
+        add_filter('script_loader_tag', function($tag, $handle, $src) {
+            if ('ccc-client-core-issues' === $handle) {
+                return '<script type="module" src="' . esc_url($src) . '"></script>';
+            }
+            return $tag;
+        }, 10, 3);
+    }
 }
 
 add_action('wp_enqueue_scripts', 'ccc_enqueue_assets');

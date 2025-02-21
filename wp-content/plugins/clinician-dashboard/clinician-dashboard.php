@@ -2,7 +2,7 @@
 /*
 Plugin Name: CCC Clinician Dashboard
 Description: Dashboard to help clinicians manage their members.
-Version: 2.5
+Version: 1.5
 Author: JP Stones
 */
 
@@ -65,32 +65,83 @@ function clinician_dashboard_shortcode() {
 
     ob_start();
     ?>
-    <p>These are the clients currently assigned to you. To interact with a specific client, please select their name from the list below.</p>
-        <table class="clinician-dashboard-table">
-            <thead>
-                <tr>
-                    <th>Client Name</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($assigned_members as $member_id): 
-                    $member = get_user_by('id', $member_id);
-                    $profile_url = add_query_arg(['client_id' => $member_id], site_url('/c-dash/member-profile'));
-                    $content_url = add_query_arg(['client_id' => $member_id], site_url('/c-dash/assigned-content'));
-                    $message_url = add_query_arg(['client_id' => $member_id], site_url('/private-messaging')); ?>
-                    <tr>
-                        <td><?php echo esc_html($member->display_name); ?></td>
-                    <td>
-                        <a href="<?php echo esc_url($profile_url); ?>" class="button">Profile</a>
-                        <a href="<?php echo esc_url($content_url); ?>" class="button">Content</a>
-                        <a href="<?php echo esc_url($message_url); ?>" class="button">Message</a>
-                        <a href="<?php echo esc_url(add_query_arg('client_id', $member_id, site_url('/notes/add-new-note/'))); ?>" class="button">Create Note</a>
-                    </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+    <div class="client-roster">
+        <p>These are the clients currently assigned to you.</p>
+        
+        <div class="client-cards-grid">
+            <?php foreach ($assigned_members as $member_id): 
+                $member = get_user_by('id', $member_id);
+                $profile_url = add_query_arg(['client_id' => $member_id], site_url('/c-dash/member-profile'));
+                $content_url = add_query_arg(['client_id' => $member_id], site_url('/c-dash/assigned-content'));
+                $message_url = add_query_arg(['client_id' => $member_id], site_url('/private-messaging'));
+                $notes_url = add_query_arg('client_id', $member_id, site_url('/notes/add-new-note/'));
+                
+                // Get join date
+                $join_date = new DateTime($member->user_registered);
+                $now = new DateTime();
+                $interval = $now->diff($join_date);
+                $months = ($interval->y * 12) + $interval->m;
+                
+                // Get profile image
+                $profile_image = plugins_url("ccc-profile-management/assets/user-id-{$member_id}.jpg");
+                $default_image = plugins_url("ccc-profile-management/assets/default-profile.jpg");
+                $profile_image_path = WP_PLUGIN_DIR . "/ccc-profile-management/assets/user-id-{$member_id}.jpg";
+                $image_url = file_exists($profile_image_path) ? $profile_image : $default_image;
+                ?>
+                
+                <div class="client-card">
+                    <div class="client-header">
+                        <img src="<?php echo esc_url($image_url); ?>" alt="Profile photo" class="client-avatar">
+                        <div class="client-info">
+                            <h3><a href="<?php echo esc_url($profile_url); ?>" class="name-link"><?php echo esc_html($member->display_name); ?></a></h3>
+                            <span class="join-date">Joined <?php echo esc_html($months); ?> months ago</span>
+                        </div>
+                    </div>
+                    
+                    <div class="client-actions">
+                        <div class="action-row">
+                            <span class="action-label">Notes</span>
+                            <span class="action-links">
+                                <span class="view-text">View</span> | 
+                                <a href="<?php echo esc_url($notes_url); ?>" class="add-link">Add</a>
+                            </span>
+                        </div>
+
+                        <div class="action-row">
+                            <span class="action-label">Core Issues</span>
+                            <span class="action-links">
+                                <span class="view-text">View</span> | 
+                                <a href="<?php echo esc_url($notes_url); ?>" class="add-link">Add</a>
+                            </span>
+                        </div>
+
+                        <div class="action-row">
+                            <span class="action-label">Bookings</span>
+                            <span class="action-links">
+                                <a href="/cxc-appointment-booking.php" class="view-link">View</a> | 
+                                <span class="add-text">Add</span>
+                            </span>
+                        </div>
+
+                        <div class="action-row">
+                            <span class="action-label">Content</span>
+                            <span class="action-links">
+                                <span class="view-text">View</span> | 
+                                <a href="<?php echo esc_url($content_url); ?>" class="add-link">Add</a>
+                            </span>
+                        </div>
+
+                        <div class="action-row">
+                            <span class="action-label">Messages</span>
+                            <span class="action-links">
+                                <a href="<?php echo esc_url($message_url); ?>" class="view-link">View</a>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
     <?php
     return ob_get_clean();
 }
@@ -171,27 +222,119 @@ function member_profile_shortcode($atts) {
         return '<p>Client not found. Please go back and select a valid client.</p>';
     }
 
-    ob_start(); ?>
-    <table border="1" style="width:100%; text-align:left;">
-        <tr>
-            <td><strong>Full Name:</strong></td>
-            <td><?php echo esc_html($member->display_name); ?></td>
-        </tr>
-        <tr>
-            <td><strong>Email:</strong></td>
-            <td><?php echo esc_html($member->user_email); ?></td>
-        </tr>
-        <tr>
-            <td><strong>Member Since:</strong></td>
-            <td><?php echo esc_html(date('F j, Y', strtotime($member->user_registered))); ?></td>
-        </tr>
-        <tr>
-            <td><strong>Role:</strong></td>
-            <td><?php echo implode(', ', $member->roles); ?></td>
-        </tr>
-    </table>
-    <?php
+    // Calculate months since joining
+    $join_date = new DateTime($member->user_registered);
+    $now = new DateTime();
+    $interval = $now->diff($join_date);
+    $months = ($interval->y * 12) + $interval->m;
+    $months_text = $months == 1 ? 'month' : 'months';
 
+    // Get member type
+    $member_type = in_array('premium_member', $member->roles) ? 'Premium' : 'Free';
+    
+    // Get profile image path
+    $profile_image = plugins_url("ccc-profile-management/assets/user-id-{$member_id}.jpg");
+    $default_image = plugins_url("ccc-profile-management/assets/default-profile.jpg");
+
+    // Check if profile image exists
+    $profile_image_path = WP_PLUGIN_DIR . "/ccc-profile-management/assets/user-id-{$member_id}.jpg";
+    $image_url = file_exists($profile_image_path) ? $profile_image : $default_image;
+
+    // Get nickname
+    $nickname = get_user_meta($member_id, 'nickname', true);
+
+    ob_start(); ?>
+    <div class="member-profile-card">
+        <div class="profile-content">
+            <div class="profile-header">
+                <div class="profile-image">
+                    <img src="<?php echo esc_url($image_url); ?>" alt="Profile photo" />
+                </div>
+                <div class="profile-info">
+                    <h3><?php echo esc_html($member->display_name); ?></h3>
+                    <div class="profile-details">
+                        <p><strong>Nickname:</strong> <?php echo esc_html($nickname); ?></p>
+                        <p><strong>Member Since:</strong> <?php echo esc_html($months); ?> <?php echo esc_html($months_text); ?> ago</p>
+                        <p><strong>Member Type:</strong> <?php echo esc_html($member_type); ?></p>
+                    </div>
+                </div>
+            </div>
+            <div class="profile-actions">
+                <a href="/private-messaging/?client_id=<?php echo $member_id; ?>" class="action-link">
+                    Message <?php echo esc_html($member->first_name); ?>
+                </a>
+                <a href="mailto:<?php echo esc_attr($member->user_email); ?>" class="action-link">
+                    Email
+                </a>
+                <?php 
+                $phone = get_user_meta($member_id, 'phone', true);
+                if ($phone): ?>
+                    <a href="tel:<?php echo esc_attr($phone); ?>" class="action-link">
+                        Phone
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .member-profile-card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin: 20px 0;
+        overflow: hidden;
+    }
+
+    .profile-content {
+        padding: 20px;
+    }
+
+    .profile-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .profile-image img {
+        width: 120px;
+        height: 120px;
+        border-radius: 60px;
+        object-fit: cover;
+    }
+
+    .profile-info h3 {
+        margin: 0 0 15px 0;
+        color: #333;
+        font-size: 24px;
+    }
+
+    .profile-details p {
+        margin: 5px 0;
+        color: #666;
+    }
+
+    .profile-actions {
+        background: #f5f5f5;
+        padding: 15px 20px;
+        display: flex;
+        gap: 20px;
+        margin: 0 -20px -20px -20px;
+    }
+
+    .action-link {
+        color: #3498db;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .action-link:hover {
+        text-decoration: underline;
+    }
+    </style>
+
+    <?php
     return ob_get_clean();
 }
 
@@ -316,8 +459,8 @@ add_action('wp_ajax_update_client_content', 'ajax_update_client_content');
 
 // START ENQUEUE JS & CSS
 
-// Enqueue JS 
 function enqueue_clinician_dashboard_scripts() {
+    // Existing script enqueue
     wp_enqueue_script(
         'clinician-dashboard-js',
         plugin_dir_url(__FILE__) . 'js/clinician-dashboard.js',
@@ -331,11 +474,16 @@ function enqueue_clinician_dashboard_scripts() {
         'ajaxurl' => admin_url('admin-ajax.php'),
         'security' => wp_create_nonce('update_content_nonce'),
     ]);
-}
-add_action('wp_enqueue_scripts', 'enqueue_clinician_dashboard_scripts');
 
-// Enqueue CSS 
-function enqueue_clinician_dashboard_styles() {
+    // Add Font Awesome
+    wp_enqueue_style(
+        'font-awesome-5',
+        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
+        [],
+        '6.0.0'
+    );
+
+    // Existing style enqueue
     wp_enqueue_style(
         'clinician-dashboard-style',
         plugin_dir_url(__FILE__) . 'css/style.css',
@@ -343,6 +491,6 @@ function enqueue_clinician_dashboard_styles() {
         '1.0'
     );
 }
-add_action('wp_enqueue_scripts', 'enqueue_clinician_dashboard_styles');
+add_action('wp_enqueue_scripts', 'enqueue_clinician_dashboard_scripts');
 
 // END ENQUEUE JS & CSS

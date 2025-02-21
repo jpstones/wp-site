@@ -150,28 +150,25 @@ function render_private_messaging_page() {
             <div id="pm-chat-thread">
                 <p>Select a contact to start chatting.</p>
             </div>
-            <div class="pm-chat-input">
-                <textarea id="pm-message-content" placeholder="Type your message..."></textarea>
-                <button id="pm-send-message">Send</button>
-                
-                <!-- Chat action buttons stacked vertically -->
-                <div class="pm-action-buttons">
-                    <!-- Voice Note Button -->
+            <div class="pm-chat-input-container">
+                <div class="pm-chat-input">
+                    <textarea id="pm-message-content" placeholder="Type your message..."></textarea>
+                    <button id="pm-send-message" class="send-button">Send</button>
                     <button id="pm-record-voice-note" type="button" class="action-button">
                         <img src="<?php echo plugins_url('assets/mic-icon.svg', __FILE__); ?>" alt="Record Voice Note" class="action-icon">
                     </button>
-                
-                    <!-- Attach File Button -->
                     <button id="pm-attach-file" type="button" class="action-button">
                         <img src="<?php echo plugins_url('assets/attach-icon.svg', __FILE__); ?>" alt="Attach File" class="action-icon">
                     </button>
-                    
-                    <!-- Hidden file input -->
-                    <input id="file-upload" type="file" style="display: none;" />
                 </div>
-        
-                <!-- Audio player to preview the recording -->
-                <audio id="audio-preview" controls style="display: none;"></audio>
+                <div class="recording-overlay">
+                    <div class="recording-timer-container">
+                        <div class="recording-indicator"></div>
+                        <div class="recording-timer">00:00</div>
+                    </div>
+                    <button class="cancel-recording">Cancel</button>
+                    <button class="stop-recording">Send</button>
+                </div>
             </div>
         </div>
     </div>
@@ -186,62 +183,98 @@ add_shortcode('private_messaging', 'render_private_messaging_page');
 
 // START LOAD MESSAGES
 
-function load_messages_ajax_handler() {
-    global $wpdb;
+function load_messages_ajax() {
+    // Add error logging
+    error_log('Loading messages - Thread ID: ' . $_POST['thread_id']);
 
-    $thread_id = intval($_POST['thread_id']);
-    $current_user_id = get_current_user_id();
-
-    function get_user_profile_avatar($user_id) {
-        $base_url = plugins_url('ccc-profile-management/assets/');
-        $custom_avatar = $base_url . "user-id-{$user_id}.jpg";
-        $default_avatar = $base_url . "default.png";
-
-        if (file_exists(WP_PLUGIN_DIR . "/ccc-profile-management/assets/user-id-{$user_id}.jpg")) {
-            return $custom_avatar;
-        } else {
-            return $default_avatar;
-        }
-    }
-
-    // Fetch messages and file attachments
-    $messages = $wpdb->get_results(
-        $wpdb->prepare(
-            "SELECT sender_id, message, file_url, file_name, sent_at 
-             FROM {$wpdb->prefix}pm_messages 
-             WHERE thread_id = %d 
-             ORDER BY sent_at ASC",
-            $thread_id
-        )
-    );
-    
-    // Directly log the fetched messages
-    error_log("Messages Retrieved for Thread ID $thread_id: " . print_r($messages, true));
-    
-    if (!$messages) {
-        wp_send_json_error(['error' => 'No messages found']);
+    if (!isset($_POST['thread_id'])) {
+        error_log('No thread ID provided');
+        wp_send_json_error(['message' => 'No thread ID provided']);
         return;
     }
 
-    // Format the messages for the response
-    $formatted_messages = array_map(function($message) use ($current_user_id) {
-        $avatar_url = get_user_profile_avatar($message->sender_id);
-        return [
-            'sender_id' => $message->sender_id,
-            'message' => $message->message,
-            'file_url' => $message->file_url,
-            'file_name' => $message->file_name,
-            'sent_at' => $message->sent_at,
-            'is_sender' => $message->sender_id == $current_user_id,
-            'avatar' => $avatar_url
-        ];
-    }, $messages);
+    global $wpdb;
+    $thread_id = intval($_POST['thread_id']);
+    
+    // Log the query for debugging
+    $query = $wpdb->prepare(
+        "SELECT m.*, u.display_name as sender_name 
+         FROM {$wpdb->prefix}pm_messages m 
+         LEFT JOIN {$wpdb->users} u ON m.sender_id = u.ID 
+         WHERE thread_id = %d 
+         ORDER BY sent_at ASC",
+        $thread_id
+    );
+    error_log('Query: ' . $query);
 
-    wp_send_json_success(['messages' => $formatted_messages]);
+    $messages = $wpdb->get_results($query);
+
+    // Check for database errors
+    if ($wpdb->last_error) {
+        error_log('Database Error: ' . $wpdb->last_error);
+        wp_send_json_error(['message' => 'Database error occurred']);
+        return;
+    }
+
+    // Check if get_user_profile_avatar function exists
+    if (!function_exists('get_user_profile_avatar')) {
+        function get_user_profile_avatar($user_id) {
+            $base_url = plugins_url('ccc-profile-management/assets/');
+            $custom_avatar = $base_url . "user-id-{$user_id}.jpg";
+            $default_avatar = $base_url . "default.png";
+            
+            if (file_exists(WP_PLUGIN_DIR . "/ccc-profile-management/assets/user-id-{$user_id}.jpg")) {
+                return $custom_avatar;
+            } else {
+                return $default_avatar;
+            }
+        }
+    }
+
+    try {
+        $formatted_messages = array_map(function($message) {
+            // Get sender's avatar
+            $avatar_url = get_user_profile_avatar($message->sender_id);
+            
+            // Check if this is a file message
+            if (!empty($message->file_url)) {
+                // Determine if it's an image
+                $is_image = preg_match('/\.(jpg|jpeg|png|gif)$/i', $message->file_url);
+                $file_name = basename($message->file_url);
+                
+                if ($is_image) {
+                    $message->message = json_encode([
+                        'type' => 'image',
+                        'file_name' => $file_name,
+                        'file_url' => $message->file_url
+                    ]);
+                } else {
+                    $message->message = json_encode([
+                        'type' => 'file',
+                        'file_name' => $file_name,
+                        'file_url' => $message->file_url
+                    ]);
+                }
+            }
+
+            return [
+                'id' => $message->id,
+                'sender_id' => $message->sender_id,
+                'sender_name' => $message->sender_name,
+                'message' => $message->message,
+                'sent_at' => $message->sent_at,
+                'avatar' => $avatar_url
+            ];
+        }, $messages);
+
+        wp_send_json_success(['messages' => $formatted_messages]);
+    } catch (Exception $e) {
+        error_log('Error formatting messages: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Error formatting messages']);
+    }
 }
 
-add_action('wp_ajax_load_messages', 'load_messages_ajax_handler');
-add_action('wp_ajax_nopriv_load_messages', 'load_messages_ajax_handler');  // Optional for non-logged-in users
+add_action('wp_ajax_load_messages', 'load_messages_ajax');
 
 // END LOAD MESSAGES
 
@@ -489,21 +522,95 @@ function pm_handle_file_upload() {
 function pm_enqueue_scripts() {
     wp_enqueue_style( 'pm-style', plugin_dir_url( __FILE__ ) . 'assets/style.css' );
     
-    // Explicitly enqueue jQuery first
     wp_enqueue_script( 'jquery' ); 
     
-    wp_enqueue_script( 'pm-script', plugin_dir_url( __FILE__ ) . 'assets/script.js', array( 'jquery' ), null, true );
+    wp_enqueue_script( 
+        'pm-script', 
+        plugin_dir_url( __FILE__ ) . 'assets/script.js', 
+        ['jquery'], 
+        null, 
+        true 
+    );
 
-    // Pass both the AJAX URL and the current user ID to the script
-    wp_localize_script( 'pm-script', 'pm_ajax', array(
-        'ajax_url' => admin_url( 'admin-ajax.php' ),
-        'current_user_id' => get_current_user_id()  // Pass user ID to JS
-    ));
+    // Pass AJAX URL and other necessary data to the script
+    wp_localize_script('pm-script', 'pm_ajax', [
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'security' => wp_create_nonce('update_content_nonce'),
+        'current_user_id' => get_current_user_id(),
+        'plugins_url' => plugins_url('assets', __FILE__),
+    ]);
 }
 
 add_action( 'wp_enqueue_scripts', 'pm_enqueue_scripts' );
 
 // END ENQUEUE CSS & JS
+
+// START AUDIO MESSAGE MANAGEMENT
+add_action('wp_ajax_pm_upload_audio', 'pm_handle_audio_upload');
+
+function pm_handle_audio_upload() {
+    error_log('Audio upload handler started');
+    
+    if (!isset($_FILES['audio'])) {
+        error_log('No audio file in request');
+        wp_send_json_error(['error' => 'No audio file uploaded.']);
+        return;
+    }
+
+    if ($_FILES['audio']['error'] !== UPLOAD_ERR_OK) {
+        error_log('File upload error: ' . $_FILES['audio']['error']);
+        wp_send_json_error(['error' => 'Upload error occurred.']);
+        return;
+    }
+
+    error_log('File received: ' . print_r($_FILES['audio'], true));
+
+    $upload = wp_handle_upload($_FILES['audio'], ['test_form' => false]);
+    
+    if (isset($upload['error'])) {
+        error_log('WordPress upload error: ' . $upload['error']);
+        wp_send_json_error(['error' => $upload['error']]);
+        return;
+    }
+
+    error_log('File uploaded successfully: ' . $upload['url']);
+
+    $file_url = ensure_https_url($upload['url']);
+    $thread_id = intval($_POST['thread_id']);
+    $sender_id = intval($_POST['sender_id']);
+
+    error_log("Inserting message - Thread ID: $thread_id, Sender ID: $sender_id");
+
+    global $wpdb;
+    $result = $wpdb->insert(
+        "{$wpdb->prefix}pm_messages",
+        [
+            'thread_id' => $thread_id,
+            'sender_id' => $sender_id,
+            'recipient_id' => get_recipient_by_thread($thread_id, $sender_id),
+            'message' => json_encode([
+                'type' => 'audio',
+                'file_url' => $file_url
+            ]),
+            'sent_at' => current_time('mysql')
+        ]
+    );
+
+    if ($result === false) {
+        error_log('Database insert failed: ' . $wpdb->last_error);
+        wp_send_json_error(['error' => 'Database insert failed: ' . $wpdb->last_error]);
+        return;
+    }
+
+    error_log('Audio message saved successfully');
+    wp_send_json_success(['file_url' => $file_url]);
+}
+// END AUDIO MESSAGE MANAGEMENT
+
+// Add this function somewhere in your PHP file
+function ensure_https_url($url) {
+    return str_replace('http://', 'https://', $url);
+}
 
 
 

@@ -62,70 +62,300 @@ jQuery(document).ready(function($) {
     });
 
 
-// START LOAD MESSAGES
+// START MESSAGE LOADING
+function formatMessageDate(dateString) {
+    const messageDate = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Reset hours to compare just the dates
+    const messageDateOnly = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
+    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+
+    if (messageDateOnly.getTime() === todayOnly.getTime()) {
+        return 'Today';
+    } else if (messageDateOnly.getTime() === yesterdayOnly.getTime()) {
+        return 'Yesterday';
+    } else {
+        // For older dates, show full date
+        return messageDate.toLocaleDateString('en-US', { 
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+}
 
 function loadMessages(thread_id) {
-    console.log("Thread ID being sent to load messages: ", thread_id);  // Debug log
-    $('#pm-chat-thread').html('<p>Loading messages...</p>');  // Show loading indicator
-
+    console.log('Loading messages for thread:', thread_id);
+    
     $.ajax({
         url: pm_ajax.ajax_url,
-        method: 'POST',
+        type: 'POST',
         data: {
             action: 'load_messages',
             thread_id: thread_id
         },
-        success: function (response) {
-            console.log("AJAX Response: ", response);
-            if (response.success) {
-                $('#pm-chat-thread').empty(); // Clear old messages
-
-                let lastDate = null; // Track last message date
-
-                response.data.messages.forEach(function (message) {
-                    let messageDate = new Date(message.sent_at).toLocaleDateString();
-                    if (messageDate !== lastDate) {
-                        $('#pm-chat-thread').append(`<div class="pm-date-separator">${messageDate}</div>`);
-                        lastDate = messageDate;
+        success: function(response) {
+            if (response.success && response.data.messages) {
+                const messages = response.data.messages;
+                let messageHTML = '';
+                let currentDate = '';
+                
+                messages.forEach(function(message) {
+                    // Check if we need to add a date separator
+                    const messageDate = formatMessageDate(message.sent_at);
+                    if (messageDate !== currentDate) {
+                        messageHTML += `
+                            <div class="pm-date-separator">
+                                <span>${messageDate}</span>
+                            </div>
+                        `;
+                        currentDate = messageDate;
                     }
 
-                    // Correctly determine if the message is from the current user or the recipient
-                    let isSender = message.sender_id == pm_ajax.current_user_id;
-                    let messageClass = isSender ? 'pm-message-sender' : 'pm-message-recipient';
-
-                    // Render messages or attachments dynamically
-                    let content = message.file_url 
-                        ? `<p>ðŸ“Ž <a href="${message.file_url}" target="_blank">${message.file_name}</a></p>` 
-                        : `<p>${message.message}</p>`;
-
-                    $('#pm-chat-thread').append(
-                        `<div class="pm-message-bubble ${messageClass}">
-                            ${!isSender ? `<img src="${message.avatar}" class="pm-recipient-avatar" alt="Avatar">` : ''}
-                            ${content}
-                        </div>`
-                    );
+                    const isCurrentUser = message.sender_id == pm_ajax.current_user_id;
+                    const messageClass = isCurrentUser ? 'pm-message-sender' : 'pm-message-recipient';
+                    
+                    try {
+                        const messageContent = JSON.parse(message.message);
+                        
+                        // Convert URL to HTTPS if needed
+                        if (messageContent.file_url) {
+                            messageContent.file_url = messageContent.file_url.replace('http://', 'https://');
+                        }
+                        
+                        if (messageContent.type === 'audio') {
+                            messageHTML += `
+                                <div class="pm-message-bubble ${messageClass}">
+                                    <div class="voice-message">
+                                        <audio controls src="${messageContent.file_url}"></audio>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (messageContent.type === 'image') {
+                            messageHTML += `
+                                <div class="pm-message-bubble ${messageClass}">
+                                    <div class="message-file-info">
+                                        <i class="fas fa-paperclip"></i>
+                                        <span class="file-name">${messageContent.file_name}</span>
+                                    </div>
+                                    <div class="image-message">
+                                        <img src="${messageContent.file_url}" alt="${messageContent.file_name}" />
+                                    </div>
+                                </div>
+                            `;
+                        } else if (messageContent.file_name && messageContent.file_name.toLowerCase().endsWith('.pdf')) {
+                            messageHTML += `
+                                <div class="pm-message-bubble ${messageClass}">
+                                    <div class="message-file-info">
+                                        <i class="fas fa-file-pdf"></i>
+                                        <span class="file-name">${messageContent.file_name}</span>
+                                    </div>
+                                    <a href="${messageContent.file_url}" target="_blank" class="pdf-link">
+                                        <div class="pdf-preview">
+                                            <div class="pdf-icon">
+                                                <i class="fas fa-file-pdf"></i>
+                                                <div class="pdf-extension">.PDF</div>
+                                            </div>
+                                            <div class="pdf-action">Click to open PDF</div>
+                                        </div>
+                                    </a>
+                                </div>
+                            `;
+                        } else {
+                            messageHTML += `
+                                <div class="pm-message-bubble ${messageClass}">
+                                    <p>${message.message}</p>
+                                </div>
+                            `;
+                        }
+                    } catch (e) {
+                        messageHTML += `
+                            <div class="pm-message-bubble ${messageClass}">
+                                <p>${message.message}</p>
+                            </div>
+                        `;
+                    }
                 });
-
-                scrollToBottom(); // Scroll to the latest message after loading
+                
+                $('#pm-chat-thread').html(messageHTML);
+                
+                // Add chat input if it doesn't exist
+                if ($('.pm-chat-input').length === 0) {
+                    console.log('Creating chat input...'); // Debug log
+                    $('#pm-chat-container').append(createChatInput());
+                    // Initialize audio recording after creating input
+                    initializeAudioRecording();
+                }
+                
+                scrollToBottom();
             } else {
-                $('#pm-chat-thread').html('<p>No messages found.</p>');  // Handle case with no messages
+                console.error('Invalid response format:', response);
+                $('#pm-chat-thread').html('<p>Error loading messages</p>');
             }
         },
-        error: function () {
-            alert('Failed to load messages. Please try again.');
+        error: function(xhr, status, error) {
+            console.error('Ajax error:', error);
+            $('#pm-chat-thread').html('<p>Error loading messages</p>');
         }
     });
 }
 
-// Dynamically update the URL when switching contacts
-
-function updateURL(user_id) {
-    let newURL = new URL(window.location.href);
-    newURL.searchParams.set('client_id', user_id);  // Update the client_id parameter
-    history.pushState(null, '', newURL);  // Change the URL without refreshing the page
+function createChatInput() {
+    console.log('Creating chat input HTML'); // Debug log
+    return `
+        <div class="pm-chat-input-container">
+            <div class="pm-chat-input">
+                <textarea id="pm-message-input" placeholder="Type your message..."></textarea>
+                <div class="pm-chat-actions">
+                    <button id="record-button" type="button" class="pm-action-button">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button id="send-button" type="button" class="pm-action-button">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
-// END LOAD MESSAGES
+// START AUDIO RECORDING MANAGEMENT
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+let timerInterval;
+let startTime;
+
+function createRecordingOverlay() {
+    return `
+        <div class="recording-overlay">
+            <div class="recording-timer-container">
+                <div class="recording-indicator"></div>
+                <div class="recording-timer">00:00</div>
+            </div>
+            <button class="cancel-recording">Cancel</button>
+        </div>
+    `;
+}
+
+function initializeAudioRecording() {
+    // Add overlay to DOM if it doesn't exist
+    if (!document.querySelector('.recording-overlay')) {
+        $('.pm-chat-input-container').append(createRecordingOverlay());
+    }
+    
+    // Make sure we start with the text input view
+    $('.recording-overlay').hide();
+    $('#pm-message-content').show();
+    isRecording = false;
+    
+    const recordButton = document.getElementById('pm-record-voice-note');
+    if (!recordButton) {
+        console.log('Record button not found');
+        return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.log('Audio recording not supported');
+        recordButton.style.display = 'none';
+        return;
+    }
+
+    recordButton.addEventListener('click', async () => {
+        try {
+            if (!isRecording) {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.addEventListener('dataavailable', event => {
+                    audioChunks.push(event.data);
+                });
+
+                mediaRecorder.addEventListener('stop', () => {
+                    if (audioChunks.length > 0) {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const threadId = $('.pm-contact.pm-selected-contact').data('thread-id');
+                        if (threadId) {
+                            handleAudioUpload(audioBlob, threadId);
+                        }
+                    }
+                    stream.getTracks().forEach(track => track.stop());
+                });
+
+                mediaRecorder.start();
+                isRecording = true;
+                recordButton.classList.add('recording');
+                
+                // Show overlay and start timer
+                startRecording();
+
+            } else {
+                stopRecording();
+            }
+        } catch (error) {
+            console.error('Error accessing microphone:', error);
+            alert('Could not access microphone. Please ensure you have granted permission to use the microphone.');
+        }
+    });
+
+    $('.cancel-recording').click(() => {
+        stopRecording(true);
+    });
+
+    $('.stop-recording').click(() => {
+        stopRecording();
+    });
+}
+
+function startRecording() {
+    $('.pm-chat-input-container').addClass('recording-active');
+    $('#pm-record-voice-note').addClass('recording');
+    $('.recording-overlay').show();
+    startTime = Date.now();
+    timerInterval = setInterval(updateTimer, 1000);
+    updateTimer();
+}
+
+function updateTimer() {
+    if (!startTime) return; // Guard against undefined startTime
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const seconds = (elapsed % 60).toString().padStart(2, '0');
+    $('.recording-timer').text(`${minutes}:${seconds}`);
+}
+
+function stopRecording(cancel = false) {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        if (cancel) {
+            mediaRecorder.stop();
+            audioChunks = [];
+        } else {
+            mediaRecorder.stop();
+        }
+    }
+    
+    clearInterval(timerInterval);
+    startTime = null;
+    $('.recording-overlay').hide();
+    isRecording = false;
+    const recordButton = document.getElementById('pm-record-voice-note');
+    if (recordButton) {
+        recordButton.classList.remove('recording');
+    }
+    $('.pm-chat-input-container').removeClass('recording-active');
+}
+
+// Make sure this runs when the page loads
+$(document).ready(function() {
+    initializeAudioRecording();
+});
+// END AUDIO RECORDING MANAGEMENT
 
 
 // START SEND MESSAGES
@@ -191,56 +421,224 @@ jQuery(document).ready(function ($) {
     function scrollToBottom() {
         $('#pm-chat-thread').scrollTop($('#pm-chat-thread')[0].scrollHeight);
     }
-});
 
+    // START FILE UPLOAD MANAGEMENT
+    $('#pm-attach-file').off('click').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("Attach button clicked");
+        
+        // Remove any existing file input first
+        $('#file-upload').remove();
+        
+        // Create new file input
+        $('<input/>', {
+            type: 'file',
+            id: 'file-upload',
+            style: 'display: none'
+        }).appendTo('body').click();
+    });
 
+    // File change handler (attached to document to catch dynamically created input)
+    $(document).on('change', '#file-upload', function() {
+        let file = this.files[0];
+        console.log("File selected:", file);
 
-// START FILE UPLOAD MANAGEMENT
+        if (!file) {
+            console.log("No file selected");
+            return;
+        }
 
-$('#file-upload').on('change', function () {
-    let file = this.files[0];
-    console.log("File input triggered. File detected:", file);  // Debugging
-    
-    if (!file) {
-        console.log("No file selected.");
-        return;
+        // Validate file type and size
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+
+        if (!allowedTypes.includes(file.type)) {
+            alert('Invalid file type. Please upload an image (JPG, PNG, GIF) or PDF.');
+            return;
+        }
+
+        if (file.size > maxSize) {
+            alert('File is too large. Maximum size is 5MB.');
+            return;
+        }
+
+        let formData = new FormData();
+        formData.append('file', file);
+        formData.append('action', 'pm_upload_file');
+        formData.append('thread_id', $('.pm-contact.pm-selected-contact').data('thread-id'));
+        formData.append('sender_id', pm_ajax.current_user_id);
+
+        // Show loading state
+        const loadingBubble = `
+            <div class="pm-message-bubble pm-message-sender">
+                <p>Uploading ${file.name}...</p>
+            </div>
+        `;
+        $('#pm-chat-thread').append(loadingBubble);
+        scrollToBottom();
+
+        $.ajax({
+            url: pm_ajax.ajax_url,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                console.log("Upload response:", response);
+                
+                if (response.success) {
+                    // Remove loading bubble
+                    $('#pm-chat-thread .pm-message-bubble:last-child').remove();
+                    
+                    // Create preview based on file type
+                    let previewContent = '';
+                    if (file.type.startsWith('image/')) {
+                        previewContent = `
+                            <div class="attachment-header">
+                                <img src="${pm_ajax.plugins_url}/attach-icon.svg" class="attachment-icon" alt="Attachment">
+                                <span>${file.name}</span>
+                            </div>
+                            <div class="attachment-preview">
+                                <img src="${response.data.file_url}" class="pm-image-preview" alt="Uploaded image">
+                            </div>
+                        `;
+                    } else {
+                        previewContent = `
+                            <div class="attachment-header">
+                                <img src="${pm_ajax.plugins_url}/attach-icon.svg" class="attachment-icon" alt="Attachment">
+                                <a href="${response.data.file_url}" target="_blank">${file.name}</a>
+                            </div>
+                        `;
+                    }
+
+                    // Add message bubble with preview
+                    $('#pm-chat-thread').append(`
+                        <div class="pm-message-bubble pm-message-sender">
+                            ${previewContent}
+                        </div>
+                    `);
+                    
+                    // Clear the file input
+                    $('#file-upload').val('');
+                    scrollToBottom();
+                } else {
+                    // Remove loading bubble and show error
+                    $('#pm-chat-thread .pm-message-bubble:last-child').remove();
+                    alert('File upload failed: ' + response.data.error);
+                }
+            },
+            error: function(xhr, status, error) {
+                // Remove loading bubble and show error
+                $('#pm-chat-thread .pm-message-bubble:last-child').remove();
+                console.error("Upload error:", error);
+                alert('An error occurred while uploading the file.');
+            }
+        });
+    });
+    // END FILE UPLOAD MANAGEMENT
+
+    // Add periodic message checking
+    function initializeMessagePolling() {
+        setInterval(() => {
+            if ($('.pm-selected-contact').length) {
+                let thread_id = $('.pm-selected-contact').data('thread-id');
+                loadMessages(thread_id);
+            }
+        }, 10000); // Check every 10 seconds
     }
 
-    console.log("File selected:", file.name, "Type:", file.type, "Size:", file.size);
+    // START AUDIO RECORDING MANAGEMENT
+    function handleAudioUpload(audioBlob, thread_id) {
+        console.log('Handling audio upload for thread:', thread_id); // Debug log
+        
+        const formData = new FormData();
+        formData.append('action', 'pm_upload_audio');
+        formData.append('audio', audioBlob, 'voice-message.webm');
+        formData.append('thread_id', thread_id);
+        formData.append('sender_id', pm_ajax.current_user_id);
 
-    let formData = new FormData();
-    formData.append('file', file);
-    formData.append('action', 'pm_upload_file');
-    formData.append('thread_id', $('.pm-contact.pm-selected-contact').data('thread-id'));
-    formData.append('sender_id', pm_ajax.current_user_id);
-
-    // Basic AJAX without preview for now
-    $.ajax({
-        url: pm_ajax.ajax_url,
-        type: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function (response) {
-            console.log("AJAX Response:", response);
-            if (response.success) {
-                $('#pm-chat-thread').append(
-                    `<div class="pm-message-bubble pm-message-sender">
-                        📎 <a href="${response.data.file_url}" target="_blank">${file.name}</a>
-                    </div>`
-                );
-                $('#file-upload').val('');  // Clear the input
-                scrollToBottom();
-            } else {
-                console.log("Upload failed:", response.data.error);
-                alert('File upload failed: ' + response.data.error);
+        $.ajax({
+            url: pm_ajax.ajax_url,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                console.log('Audio upload response:', response); // Debug log
+                if (response.success) {
+                    // Don't try to send another message - the PHP handler already saved it
+                    loadMessages(thread_id); // Just reload the messages
+                } else {
+                    console.error('Upload failed:', response);
+                    alert('Failed to upload audio message. Please try again.');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Upload failed:', error);
+                alert('Failed to upload audio message. Please try again.');
             }
-        },
-        error: function (xhr, status, error) {
-            console.log("AJAX error:", error);
-            alert('An error occurred while uploading the file.');
-        }
-    });
-});
+        });
+    }
 
-// END FILE UPLOAD MANAGEMENT
+    // Function to send text messages (used by both text and audio messages)
+    function sendTextMessage(message, thread_id) {
+        $.ajax({
+            url: pm_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'pm_send_message',
+                message: message,
+                thread_id: thread_id,
+                sender_id: pm_ajax.current_user_id
+            },
+            success: function(response) {
+                if (response.success) {
+                    loadMessages(thread_id);
+                } else {
+                    console.error('Message send failed:', response);
+                    alert('Failed to send message. Please try again.');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Message send failed:', error);
+                alert('Failed to send message. Please try again.');
+            }
+        });
+    }
+
+    // Initialize when document is ready AND when switching threads
+    $(document).ready(function() {
+        console.log('Document ready, initializing messaging...');
+        console.log('AJAX URL:', pm_ajax.ajax_url);
+        console.log('Current User ID:', pm_ajax.current_user_id);
+        
+        initializeAudioRecording();
+        
+        // Load initial messages if there's a selected contact
+        const selectedContact = $('.pm-contact.pm-selected-contact');
+        if (selectedContact.length) {
+            const threadId = selectedContact.data('thread-id');
+            console.log('Initial selected contact thread ID:', threadId);
+            if (threadId) {
+                loadMessages(threadId);
+            }
+        }
+        
+        // Handle contact selection
+        $(document).on('click', '.pm-contact', function() {
+            const threadId = $(this).data('thread-id');
+            console.log('Contact clicked, loading thread ID:', threadId);
+            if (threadId) {
+                loadMessages(threadId);
+            }
+        });
+
+        // Re-initialize when switching threads
+        $(document).on('pm-thread-loaded', function() {
+            console.log('Thread loaded, reinitializing audio...'); // Debug log
+            initializeAudioRecording();
+        });
+    });
+    // END AUDIO RECORDING MANAGEMENT
+});

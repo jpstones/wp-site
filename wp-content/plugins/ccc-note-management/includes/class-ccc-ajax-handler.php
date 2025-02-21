@@ -63,20 +63,20 @@ class CCC_AJAX_Handler {
         $note_content = isset($_POST['note']) ? sanitize_textarea_field($_POST['note']) : '';
         $core_issues_raw = isset($_POST['core_issues']) ? $_POST['core_issues'] : '[]';
     
-        // Check if the current user has permission to edit the specified client
+        // Check client permissions
         if (!current_user_can('edit_user', $client_id)) {
             error_log("❌ User does not have permission to edit the client ID $client_id.");
             wp_send_json_error(['message' => 'Unauthorized to edit client data.']);
         }
     
-        // Decode core issues properly
+        // Decode core issues
         $core_issues = json_decode(stripslashes($core_issues_raw), true);
         if (!is_array($core_issues)) {
             $core_issues = [];
         }
         
-        error_log("📋 Core Issues Data Received: " . print_r($core_issues, true));
-    
+        error_log("📋 Processing Core Issues: " . print_r($core_issues, true));
+
         // Process each core issue
         foreach ($core_issues as $issue) {
             // Skip if no ID
@@ -84,8 +84,8 @@ class CCC_AJAX_Handler {
                 continue;
             }
 
-            // Handle existing core issues (those with numeric IDs)
-            if (is_numeric($issue['id']) && isset($issue['is_existing']) && $issue['is_existing']) {
+            // Check if this is a numeric ID (existing issue)
+            if (is_numeric($issue['id'])) {
                 $core_issue_post = get_post($issue['id']);
                 
                 // Verify post exists and is a core issue
@@ -95,6 +95,8 @@ class CCC_AJAX_Handler {
                     
                     // Only update if severity has changed
                     if ($current_severity != $issue['severity']) {
+                        error_log("📝 Updating existing core issue {$issue['id']} severity from {$current_severity} to {$issue['severity']}");
+                        
                         // Update the main severity field
                         update_field('severity', $issue['severity'], $issue['id']);
                         
@@ -109,103 +111,68 @@ class CCC_AJAX_Handler {
                         
                         // Update history field
                         update_field('history', $history, $issue['id']);
-                        
-                        error_log("✅ Updated severity for core issue {$issue['id']} to {$issue['severity']}");
                     }
                 }
-            } else if (strpos($issue['id'], 'new_') === 0) {
-                // Handle new core issues
-                // ... existing new core issue creation code ...
+            } 
+            // Only create new issues if ID starts with 'new_'
+            else if (strpos($issue['id'], 'new_') === 0) {
+                error_log("📝 Creating new core issue: " . $issue['name']);
+                
+                // Create new core issue
+                $core_issue_post_id = wp_insert_post([
+                    'post_title' => sanitize_text_field($issue['name']),
+                    'post_type' => 'core_issues',
+                    'post_status' => 'publish',
+                    'meta_input' => [
+                        'client' => $client_id
+                    ]
+                ]);
+
+                if ($core_issue_post_id) {
+                    // Set initial fields
+                    update_field('severity', $issue['severity'], $core_issue_post_id);
+                    update_field('status', 'active', $core_issue_post_id);
+                    update_field('frequency', $issue['frequency'], $core_issue_post_id);
+                    update_field('first_appearance', $issue['first_appearance'], $core_issue_post_id);
+                    
+                    // Initialize history with first severity using proper date format
+                    $history = [[
+                        'date' => date('d/m/Y'),  // Changed to d/m/Y format
+                        'severity' => $issue['severity']
+                    ]];
+                    update_field('history', $history, $core_issue_post_id);
+                    
+                    error_log("✅ Created new core issue: ID {$core_issue_post_id}");
+                    error_log("Frequency: " . $issue['frequency']);
+                }
             }
         }
-    
-        // Debugging logs
-        error_log("📌 Saving Note - Client ID: $client_id, Content: $note_content");
-        error_log("📋 Core Issues Data Received: " . print_r($core_issues, true));
-    
-        // Log client_id to check if it's correctly passed
-        error_log("📋 Client ID: " . $client_id);
-    
-        // Get the client details for the note title
+
+        // Get client and clinician names
         $client = get_user_by('id', $client_id);
-        $client_name = $client ? $client->display_name : 'Unknown Client';
-    
-        // Get the coach (current logged-in user) details for the note title
-        $coach_name = wp_get_current_user()->display_name;
-    
-        // Generate a more meaningful note title
-        $note_title = "Session Notes by $coach_name (Coach) for $client_name (Client)";
-    
-        // Save the note as a post under the 'note' post type with a dynamic title
+        $clinician = wp_get_current_user();
+        $client_name = $client ? $client->display_name : "Client {$client_id}";
+        $clinician_name = $clinician->display_name;
+
+        // Create the note
         $note_id = wp_insert_post([
-            'post_title'  => $note_title,  // Use the dynamic title here
+            'post_title'  => "Session Notes for {$client_name} by {$clinician_name}",
             'post_content' => $note_content,
             'post_status' => 'publish',
             'post_type'   => 'note',
             'post_author' => get_current_user_id(),
-            'meta_input'  => ['client_id' => $client_id] // Store client_id in post meta
+            'meta_input'  => ['client_id' => $client_id]
         ]);
-    
+
         if ($note_id) {
-            error_log("✅ Note Created - Post ID: $note_id");
-    
-            // Save the client relationship to the Note (ACF)
-            update_field('client', $client_id, $note_id);  // Assuming 'client' is the ACF relationship field on Notes
+            update_field('client', $client_id, $note_id);
+            update_field('note', $note_content, $note_id);
             
-            // Save the actual note content to ACF (saving it in 'note' field)
-            update_field('note', $note_content, $note_id);  // 'note' is the ACF field for note content
-    
-            // Debugging: Make sure core issues are correctly fetched
-            error_log("📋 Core Issues to Save: " . print_r($core_issues, true));
-    
-            // Save core issues to ACF fields (not user meta now)
-            if (is_array($core_issues) && !empty($core_issues)) {
-                foreach ($core_issues as $issue) {
-                    // Get the Core Issue post ID
-                    $core_issue_post_id = wp_insert_post([
-                        'post_title' => sanitize_text_field($issue['name']),
-                        'post_type' => 'core_issues',  // Core Issues post type
-                        'post_status' => 'publish',
-                        'meta_input' => [
-                            'client' => $client_id,  // Link the core issue to the client (user field)
-                            'severity' => $issue['severity'],  // Save severity in ACF field
-                            'curiosity' => isset($issue['curiosity']) ? $issue['curiosity'] : '',
-                            'compassion' => isset($issue['compassion']) ? $issue['compassion'] : '',
-                            'first_appearance' => isset($issue['first_appearance']) ? $issue['first_appearance'] : '',
-                            'status' => 'active', // Set status to active programmatically
-                            'history' => []  // Initialize empty history array
-                        ]
-                    ]);
-    
-                    if ($core_issue_post_id) {
-                        // Programmatically set the status to 'active'
-                        update_field('status', 'active', $core_issue_post_id);
-                        error_log("✅ Core Issue Saved - Post ID: $core_issue_post_id");
-    
-                        // Now add the first severity change to the history
-                        $history = [
-                            [
-                                'date' => date('Y-m-d'),  // Store current date
-                                'severity' => $issue['severity'],  // First severity
-                                ] 
-                            ];
-    
-                        update_field('history', $history, $core_issue_post_id); // Save history
-                        error_log("✅ History for Core Issue Updated");
-                    } else {
-                        error_log("❌ Failed to Save Core Issue");
-                    }
-                }
-            }
-    
-            // Send the success message with both note and core issues saved
             wp_send_json_success([
-                'message' => 'Note and core issue history saved successfully!',
-                'note_id' => $note_id,
-                'core_issues_message' => '✅ Core Issues Saved Successfully!'  // Add success message for core issues
+                'message' => 'Note and core issues saved successfully!',
+                'note_id' => $note_id
             ]);
         } else {
-            error_log("❌ Failed to create note.");
             wp_send_json_error(['message' => 'Failed to save note.']);
         }
     }

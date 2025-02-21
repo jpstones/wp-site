@@ -12,7 +12,6 @@
 
 }
 
-
 /* Contacts list items (pill-shaped) */
 #pm-contacts-list,
 .pm-contact-list {
@@ -63,32 +62,130 @@
 }
 
 /* Chat input section */
+.pm-chat-input-container {
+    position: relative;
+    width: 100%;
+}
+
 .pm-chat-input {
     display: flex;
-    gap: 10px;
-    align-items: flex-start;
-
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: white;
 }
-
-textarea {
-    width: 85%;
-    padding: 10px;
-    resize: none;
-}
-
-/* General message bubble styling */
 
 #pm-message-content {
     flex: 1;
     padding: 10px;
+    height: 20px;
     border: 1px solid #ccc;
     border-radius: 5px;
     resize: none;
     min-height: 50px; /* Consistent minimum height for the textarea */
 }
 
+
+.action-button {
+    height: 40px;
+    width: 40px;
+    padding: 8px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-button:hover,
+.action-button.recording {
+    background: #F0F2F5;
+}
+
+.send-button {
+    height: 40px;
+    min-width: 80px;
+    padding: 0 24px;
+    border: none;
+    border-radius: 8px;
+    background: #dc3545;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    margin-right: 8px; /* Space before the mic button */
+}
+
+/* Recording overlay styles */
+.recording-overlay {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: calc(100% - 104px);
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: white;
+}
+
+.recording-timer-container {
+    height: 40px;
+    min-width: 300px; /* Set a specific pixel width instead */
+    flex: 0 0 auto; /* Don't allow flex to override the width */
+    background: #F0F2F5;
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.recording-indicator {
+    width: 8px;
+    height: 8px;
+    background: #dc3545;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+.recording-timer {
+    font-size: 14px;
+    color: #050505;
+}
+
+.cancel-recording,
+.stop-recording {
+    flex-shrink: 0; /* Prevent buttons from shrinking */
+}
+
+.cancel-recording {
+    height: 40px;
+    min-width: 80px;
+    padding: 0 24px;
+    border: none;
+    border-radius: 8px;
+    background: #E4E6EB;
+    color: #050505;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.stop-recording {
+    height: 40px;
+    min-width: 80px;
+    padding: 0 24px;
+    border: none;
+    border-radius: 8px;
+    background: #dc3545;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    margin-right: 8px;
+}
+
 #pm-send-message {
-    background-color: #BC1752;
+    background-color: #dc3545;
     color: white;
     border: none;
     padding: 0 20px;
@@ -107,14 +204,13 @@ textarea {
 }
 
 .pm-message-bubble {
-    padding: 12px;
-    border-radius: 10px;
-    max-width: 60%;
-    margin-bottom: 10px;
-    word-wrap: break-word;
-    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: flex-start;
+    background: #ffffff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    max-width: 65%;
+    margin: 2px 0;
+    position: relative;
+    border-bottom: none;
 }
 
 /* Recipient avatar next to their speech bubble */
@@ -150,9 +246,17 @@ textarea {
 /* Date separator styling */
 .pm-date-separator {
     text-align: center;
-    font-size: 14px;
-    color: #666;
-    margin: 20px 0 10px 0;
+    margin: 20px 0;
+    position: relative;
+}
+
+.pm-date-separator span {
+    background: #e9edef;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: #54656f;
+    display: inline-block;
 }
 
 /* mic and attach button styling */
@@ -236,10 +340,298 @@ textarea {
 
 /* in thread in line image preview */
 
-.pm-image-preview {
-    max-width: 150px;
-    max-height: 150px;
-    border-radius: 8px;
-    margin-top: 5px;
+.attachment-header {
+    padding: 8px 0;
+}
+
+.file-name {
+    color: #111b21;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.pdf-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: #fff;
+    border-radius: 6px;
+}
+
+.pdf-type {
+    color: #667781;
+    font-size: 13px;
+}
+
+.pdf-action {
+    color: #667781;
+    font-size: 13px;
+}
+
+.pdf-link {
+    text-decoration: none;
     display: block;
+}
+
+/* Adjust the attachment icon size */
+.attachment-icon {
+    width: 30px;  /* Reduced from default size */
+    height: 30px;
+    display: inline-block;
+}
+
+/* Remove any potential border/line styles */
+.attachment-header,
+.pdf-preview,
+.pdf-link,
+.file-name {
+    border: none;
+    border-bottom: none;
+    background-image: none;
+}
+
+.pm-image-preview {
+    max-width: 400px;  /* Increased from 300px */
+    max-height: 400px; /* Increased from 300px */
+    border-radius: 8px;
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Recording interface */
+.recording-interface {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 15px;
+    background: #fff;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+.recording-status {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.recording-indicator {
+    width: 12px;
+    height: 12px;
+    background: #f44336;
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+}
+
+.recording-timer {
+    font-size: 18px;
+    color: #333;
+    min-width: 50px;
+    font-weight: bold;
+}
+
+.recording-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.action-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.action-button.accept-recording {
+    background-color: #4CAF50;
+}
+
+.action-button.cancel-recording {
+    background-color: #f44336;
+}
+
+.action-button.accept-recording:hover {
+    background-color: #45a049;
+}
+
+.action-button.cancel-recording:hover {
+    background-color: #da190b;
+}
+
+.action-button svg {
+    width: 24px;
+    height: 24px;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+#pm-record-voice-note.recording {
+    background-color: #ffebee !important;
+    border: 2px solid #f44336 !important;
+}
+
+.message-file-info {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #667781;
+    font-size: 0.9em;
+    border-bottom: none;
+}
+
+.message-file-info i {
+    font-size: 1.2em;
+}
+
+.image-message img {
+    max-width: 300px;
+    border-radius: 4px;
+}
+
+
+/* PDF preview */
+
+.pdf-preview:hover {
+    background: #f8f9fa;
+}
+
+.pdf-icon {
+    display: flex;
+    align-items: center;
+}
+
+.pdf-icon i {
+    font-size: 24px;
+    color: #667781;
+}
+
+.pdf-link:after {
+    display: none;
+}
+
+.message-file-info {
+    margin-bottom: 8px;
+}
+
+#record-button {
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    border: none;
+    background: none;
+    color: #667781;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#record-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+#record-button.recording {
+    color: #dc3545;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.recording-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: white;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    gap: 8px;
+}
+
+.recording-timer-container {
+    flex: 1;
+    width: 90%; 
+    height: 40px;
+    background: #F0F2F5;
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.recording-indicator {
+    width: 8px;
+    height: 8px;
+    background: #dc3545;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+.recording-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.cancel-recording,
+.stop-recording {
+    padding: 8px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    height: 40px;
+    font-weight: 500;
+}
+
+.cancel-recording {
+    background: #E4E6EB;
+    color: #050505;
+}
+
+.stop-recording {
+    background: #dc3545;
+    color: white;
+}
+
+.send-button {
+    padding: 8px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background: #dc3545;
+    color: white;
+    font-weight: 500;
+    height: 40px;
+}
+
+/* Make sure the container has relative positioning */
+.pm-chat-input-container {
+    position: relative;
+    width: 100%;
 }

@@ -9,8 +9,24 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Add debugging information at the top
+if (!is_user_logged_in()) {
+    echo '<p style="color: red;">You must be logged in to add notes.</p>';
+    return;
+}
+
+// Debug current user information
+$current_user = wp_get_current_user();
+echo '<!-- Debug Info:
+User ID: ' . $current_user->ID . '
+User Roles: ' . implode(', ', $current_user->roles) . '
+-->';
+
 // Get logged-in coach/clinician ID
 $coach_id = get_current_user_id();
+
+// Debug coach ID
+echo '<!-- Coach ID: ' . $coach_id . ' -->';
 
 // Fetch assigned clients using ACF
 $assigned_clients = get_field('assigned_members', 'user_' . $coach_id);
@@ -67,59 +83,87 @@ wp_reset_postdata();
 ?>
 
 <div class="ccc-note-container">
-    <h2>Add New Note</h2>
+    <h2>Session Notes & Core Issues</h2>
 
     <!-- Client Selection -->
-    <label for="ccc_assigned_client"><strong>Client:</strong></label>
-    <select name="ccc_assigned_client" id="ccc_assigned_client" style="width: 100%; margin-bottom: 10px;">
-        <?php
-        if (!empty($assigned_clients)) {
-            foreach ($assigned_clients as $client_id) {
-                $client = get_user_by('id', $client_id);
-                $selected = ($client_id == $selected_client) ? 'selected' : '';
-                if ($client) {
-                    echo '<option value="' . esc_attr($client_id) . '" ' . $selected . '>' . esc_html($client->display_name) . '</option>';
+    <div class="form-section">
+        <label for="ccc_assigned_client" class="section-label"><strong>Client:</strong></label>
+        <select name="ccc_assigned_client" id="ccc_assigned_client">
+            <?php
+            if (!empty($assigned_clients)) {
+                foreach ($assigned_clients as $client_id) {
+                    $client = get_user_by('id', $client_id);
+                    $selected = ($client_id == $selected_client) ? 'selected' : '';
+                    if ($client) {
+                        echo '<option value="' . esc_attr($client_id) . '" ' . $selected . '>' . esc_html($client->display_name) . '</option>';
+                    }
                 }
+            } else {
+                echo '<option value="">No assigned members available</option>';
             }
-        } else {
-            echo '<option value="">No assigned members available</option>';
-        }
-        ?>
-    </select>
+            ?>
+        </select>
+    </div>
 
     <!-- Notes Section -->
-    <label for="ccc_note"><strong>Session Notes:</strong></label>
-    <textarea id="ccc_note" name="ccc_note" rows="5" style="width: 100%;" required></textarea>
+    <div class="form-section">
+        <label for="ccc_note" class="section-label"><strong>Session Notes:</strong></label>
+        <?php 
+        $editor_settings = array(
+            'textarea_name' => 'ccc_note',
+            'textarea_rows' => 10,
+            'media_buttons' => false,
+            'teeny' => true,
+            'quicktags' => true,
+            'tinymce' => array(
+                'toolbar1' => 'bold,italic,underline,bullist,numlist,link,unlink,undo,redo',
+                'toolbar2' => '',
+            ),
+        );
+        wp_editor('', 'ccc_note', $editor_settings); 
+        ?>
+    </div>
 
-    <!-- Core Issues Section -->
-    <label for="ccc_issues"><strong>Core Issues:</strong></label>
-    <div id="core-issues-container">
-        <?php if (!empty($core_issues)) : ?>
-            <?php foreach ($core_issues as $issue) : ?>
-                <div class="core-issue-row" data-issue-id="<?php echo esc_attr($issue['id']); ?>" style="display: flex; width: 100%; align-items: center; justify-content: space-between; padding: 10px 0;">
-                    <!-- Issue Name (disabled) -->
-                    <input type="text" value="<?php echo esc_attr($issue['name']); ?>" disabled style="flex: 2; padding: 8px; border: 1px solid #ccc; background: #fff; font-size: 16px;">
+    <!-- Core Issues Sections -->
+    <div class="form-section">
+        <label class="section-label"><strong>Existing Core Issues:</strong></label>
+        <div id="existing-core-issues-container">
+            <?php if (!empty($core_issues)) : ?>
+                <?php foreach ($core_issues as $issue) : ?>
+                    <div class="core-issue-row" data-issue-id="<?php echo esc_attr($issue['id']); ?>" style="display: flex; width: 100%; align-items: center; justify-content: space-between; padding: 10px 0;">
+                        <!-- Issue Name (disabled) -->
+                        <input type="text" value="<?php echo esc_attr($issue['name']); ?>" disabled style="flex: 2; padding: 8px; border: 1px solid #ccc; background: #fff; font-size: 16px;">
 
-                    <!-- Severity Dropdown -->
-                    <select name="core_issue_severity[]" style="flex: 1; padding: 8px; font-size: 16px;">
-                        <?php for ($i = 1; $i <= 5; $i++) : ?>
-                            <option value="<?php echo $i; ?>" <?php selected($issue['severity'], $i); ?>>
-                                <?php echo $i . ($i == 1 ? " - Mild" : ($i == 5 ? " - Severe" : "")); ?>
-                            </option>
-                        <?php endfor; ?>
-                    </select>
+                        <!-- Severity Dropdown -->
+                        <select name="core_issue_severity[]" style="flex: 1; padding: 8px; font-size: 16px;">
+                            <?php for ($i = 1; $i <= 5; $i++) : ?>
+                                <option value="<?php echo $i; ?>" <?php selected($issue['severity'], $i); ?>>
+                                    <?php echo $i . ($i == 1 ? " - Mild" : ($i == 5 ? " - Severe" : "")); ?>
+                                </option>
+                            <?php endfor; ?>
+                        </select>
 
-                    <!-- Archive Icon -->
-                    <img src="<?php echo esc_url(CCC_NOTE_MANAGEMENT_URL . 'assets/images/archive-icon.svg'); ?>" 
-                         alt="Archive" 
-                         class="archive-core-issue" 
-                         data-issue-id="<?php echo esc_attr($issue['id']); ?>"
-                         style="width: 24px; height: 24px; cursor: pointer; margin-left: 10px;">
-                </div>
-            <?php endforeach; ?>
-        <?php else : ?>
-            <p>No core issues found.</p>
-        <?php endif; ?>
+                        <!-- Archive Icon -->
+                        <img src="<?php echo esc_url(CCC_NOTE_MANAGEMENT_URL . 'assets/images/archive-icon.svg'); ?>" 
+                             alt="Archive" 
+                             class="archive-core-issue" 
+                             data-issue-id="<?php echo esc_attr($issue['id']); ?>"
+                             style="width: 24px; height: 24px; cursor: pointer; margin-left: 10px;">
+                    </div>
+                <?php endforeach; ?>
+            <?php else : ?>
+                <p class="no-issues-message">No existing core issues found.</p>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Unsaved Core Issues Section -->
+    <div class="form-section">
+        <label class="section-label"><strong>New Core Issues:</strong></label>
+        <div id="unsaved-core-issues-container">
+            <!-- New issues will be added here dynamically -->
+            <p class="no-unsaved-issues-message">No unsaved core issues.</p>
+        </div>
     </div>
 
     <!-- Modal for adding a new core issue -->
@@ -145,11 +189,57 @@ wp_reset_postdata();
                     <option value="5">5 - Severe</option>
                 </select>
             </div>
+
+            <!-- Frequency -->
+            <div class="modal-section">
+                <label for="core-issue-frequency">How frequently does this issue occur?</label>
+                <select id="core-issue-frequency" required>
+                    <option value="many_day">Many times a day</option>
+                    <option value="once_day">Once or twice a day</option>
+                    <option value="many_week">Many times a week</option>
+                    <option value="once_week">Once or twice a week</option>
+                    <option value="once_month">Once or twice a month</option>
+                </select>
+            </div>
     
             <!-- First Appearance Date -->
-            <div class="modal-section">
+            <div class="modal-field">
                 <label for="core-issue-first-appearance">Roughly, when did you first notice this issue?</label>
-                <input type="date" id="core-issue-first-appearance" required>
+                <div class="month-year-picker">
+                    <select id="core-issue-first-appearance-month" name="first-appearance-month">
+                        <?php
+                        $current_month = date('n'); // Get current month number (1-12)
+                        $months = [
+                            1 => 'January', 2 => 'February', 3 => 'March',
+                            4 => 'April', 5 => 'May', 6 => 'June',
+                            7 => 'July', 8 => 'August', 9 => 'September',
+                            10 => 'October', 11 => 'November', 12 => 'December'
+                        ];
+                        foreach ($months as $num => $name) {
+                            $selected = $num === $current_month ? 'selected' : '';
+                            printf(
+                                '<option value="%02d" %s>%s</option>',
+                                $num,
+                                $selected,
+                                esc_html($name)
+                            );
+                        }
+                        ?>
+                    </select>
+                    <select id="core-issue-first-appearance-year" name="first-appearance-year">
+                        <?php
+                        $current_year = intval(date('Y'));
+                        for ($year = $current_year; $year >= $current_year - 10; $year--) {
+                            printf(
+                                '<option value="%d" %s>%d</option>',
+                                $year,
+                                $year === $current_year ? 'selected' : '',
+                                $year
+                            );
+                        }
+                        ?>
+                    </select>
+                </div>
             </div>
     
             <!-- Curiosity -->
@@ -187,28 +277,23 @@ wp_reset_postdata();
     <button type="submit" id="submit-note">Save Note</button>
 </div>
 
-
-<script>
-document.getElementById("add-core-issue").addEventListener("click", function(event) {
-    event.preventDefault();
-    // Open the modal with fields for the new core issue
-    document.getElementById("core-issue-modal").style.display = "block";
-});
-
-// Close the modal when the "X" button is clicked
-document.getElementById("close-modal").addEventListener("click", function() {
-    document.getElementById("core-issue-modal").style.display = "none";
-});
-
-// Close the modal if the user clicks outside of it
-window.onclick = function(event) {
-    if (event.target == document.getElementById("core-issue-modal")) {
-        document.getElementById("core-issue-modal").style.display = "none";
+<style>
+    .month-year-picker {
+        display: flex;
+        gap: 10px;
+        margin-top: 5px;
     }
-};
-
-// Initialize datepicker
-jQuery(document).ready(function($){
-    $(".datepicker").datepicker();
-});
-</script>
+    .month-year-picker select {
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        background-color: white;
+    }
+    #core-issue-first-appearance-month {
+        flex: 2;
+    }
+    #core-issue-first-appearance-year {
+        flex: 1;
+    }
+</style>
